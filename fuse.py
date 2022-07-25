@@ -12,12 +12,17 @@ from models.attention import Attention
 from models.constructor import Constructor
 from models.extractor import Extractor
 
+# minimize model
+from models.constructor_minimize import Constructor as Constructor_lite
+from models.extractor_minimize import Extractor as Extractor_lite
+from models.extractor_minimize_tradConv import Extractor as Extractor_lite_tradConv
+
 class Fuse:
     """
     fuse with infrared folder and visible folder
     """
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, USE_liteModel: bool, USE_tradCONV: bool, USE_Attention: bool):
         """
         :param model_path: path of pre-trained parameters
         """
@@ -29,26 +34,38 @@ class Fuse:
         # model parameters
         params = torch.load(model_path, map_location='cpu')
 
+        if USE_liteModel:
+            if USE_tradCONV:
+                net_ext = Extractor_lite_tradConv()
+            else:
+                net_ext = Extractor_lite()
+
+            net_con = Constructor_lite()
+        else:
+            net_ext = Extractor()
+            net_con = Constructor()
+
         # load extractor
-        net_ext = Extractor()
         net_ext.load_state_dict(params['ext'])
         net_ext.to(device)
         net_ext.eval()
         self.net_ext = net_ext
 
         # load constructor
-        net_con = Constructor()
         net_con.load_state_dict(params['con'])
         net_con.to(device)
         net_con.eval()
         self.net_con = net_con
 
         # load attention layer
-        net_att = Attention()
-        net_att.load_state_dict(params['att'])
-        net_att.to(device)
-        net_att.eval()
-        self.net_att = net_att
+        if USE_Attention:
+            net_att = Attention()
+            net_att.load_state_dict(params['att'])
+            net_att.to(device)
+            net_att.eval()
+            self.net_att = net_att
+        else:
+            self.net_att = None
 
         # softmax and feather-fuse
         self.softmax = torch.nn.Softmax(dim=1)
@@ -62,13 +79,23 @@ class Fuse:
         :param dst: fusion image output folder
         """
 
+        ext_params = sum(p.numel() for p in self.net_ext.parameters())
+        con_params = sum(p.numel() for p in self.net_con.parameters())
+        if self.net_att:
+            att_params = sum(p.numel() for p in self.net_att.parameters())
+        else:
+            att_params = 0
+
+        print('ext_params: ', ext_params)
+        print('con_params: ', con_params)
+        print('att_params: ', att_params)
+        print('total_params: ', ext_params+con_params+att_params)
+
         # image list
         ir_folder = pathlib.Path(ir_folder)
         vi_folder = pathlib.Path(vi_folder)
         ir_list = [x for x in ir_folder.glob('*') if x.suffix in ['.bmp', '.png', '.jpg']]
         vi_list = [x for x in vi_folder.glob('*') if x.suffix in ['.bmp', '.png', '.jpg']]
-
-        print(len(ir_list))
 
         # check image name and fuse
         fuse_time = []
@@ -115,19 +142,19 @@ class Fuse:
         ir_1, ir_b_1, ir_b_2 = self.net_ext(ir)
         vi_1, vi_b_1, vi_b_2 = self.net_ext(vi)
 
-        ir_att = self.net_att(ir)
-        vi_att = self.net_att(vi)
+        if self.net_att:
+            ir_att = self.net_att(ir)
+            vi_att = self.net_att(vi)
 
-        fus_1 = ir_1 * ir_att + vi_1 * vi_att
+            fus_1 = ir_1 * ir_att + vi_1 * vi_att
+        else:
+            fus_1 = ir_1 + vi_1
+
+
         fus_1 = self.softmax(fus_1)
         fus_b_1, fus_b_2 = self.feather_fuse((ir_b_1, ir_b_2), (vi_b_1, vi_b_2))
 
         fus_2 = self.net_con(fus_1, fus_b_1, fus_b_2)
-
-        # input_1, input_b_1, input_b_2 = self.net_ext(ir)
-        # input_att = self.net_att(ir)
-        # fus_1 = input_1 * input_att
-        # fus_2 = self.net_con(fus_1, input_b_1, input_b_2)
         
         return fus_2
 
@@ -146,11 +173,23 @@ class Fuse:
 
 
 if __name__ == '__main__':
-    model = 'a11'
-    f = Fuse(f'./cache/{model}/004.pth')
-    f('data/test/ir', 'data/test/vi', f'runs/{model}')
-    # f('../datasets/TNO/FEL_images/Tree_sequence/thermal', '../datasets/TNO/FEL_images/Tree_sequence/visual', f'runs/{model}_Tree')
 
-    # f = Fuse(f'./weights/default.pth')
-    # f('data/test/ir', 'data/test/vi', f'runs/default')
-    # f('../datasets/TNO/FEL_images/Nato_camp_sequence/thermal', '../datasets/TNO/FEL_images/Nato_camp_sequence/visual', f'runs/default_Nato')
+    # Original / Dilated Conv / Attention
+    model = 'MFEIF'
+    f = Fuse(f'./cache/{model}.pth', USE_liteModel=False, USE_tradCONV=False, USE_Attention=True)
+    f('data/test/ir', 'data/test/vi', f'runs/{model}')
+
+    # Lite / Dilated Conv / Attention
+    model = 'MFEIF_Lite'
+    f = Fuse(f'./cache/{model}.pth', USE_liteModel=True, USE_tradCONV=False, USE_Attention=True)
+    f('data/test/ir', 'data/test/vi', f'runs/{model}')
+
+    # Lite / Traditional Conv / Attention
+    model = 'MFEIF_Lite_tradCONV'
+    f = Fuse(f'./cache/{model}.pth', USE_liteModel=True, USE_tradCONV=True, USE_Attention=True)
+    f('data/test/ir', 'data/test/vi', f'runs/{model}')
+
+    # Lite / Dilated Conv / without Attention
+    model = 'MFEIF_Lite_noAtt'
+    f = Fuse(f'./cache/{model}.pth', USE_liteModel=True, USE_tradCONV=False, USE_Attention=False)
+    f('data/test/ir', 'data/test/vi', f'runs/{model}')
