@@ -1,4 +1,4 @@
-# Image_Fusion
+# MFEIF_Lite
 
 ### Install
 ```
