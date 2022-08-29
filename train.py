@@ -8,7 +8,7 @@ from argparse import Namespace
 
 # import wandb
 
-from pipeline.train import Train
+from pipeline.train_c import Train
 from utils.environment_probe import EnvironmentProbe
 
 
@@ -17,15 +17,10 @@ def parse_args() -> Namespace:
     parser = argparse.ArgumentParser()
 
     # universal opt
-    parser.add_argument('--id', default='a11', help='train process identifier')
+    parser.add_argument('--id', default='MFEIF_c_woAttn', help='train process identifier')
     parser.add_argument('--folder', default='../datasets/FLIR_ADAS_v2', help='data root path')
     parser.add_argument('--size', default=256, help='resize image to the specified size')
     parser.add_argument('--cache', default='cache', help='weights cache folder')
-
-    # TarDAL opt
-    parser.add_argument('--depth', default=3, type=int, help='network dense depth')
-    parser.add_argument('--dim', default=32, type=int, help='network features dimension')
-    parser.add_argument('--weight', nargs='+', type=float, default=[10, 1, 1], help='loss weight')
 
     # checkpoint opt
     parser.add_argument('--epochs', type=int, default=4, help='epoch to train')
