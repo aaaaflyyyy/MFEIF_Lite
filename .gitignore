@@ -1,11 +1,4 @@
-functions/__pycache__/__init__.cpython-37.pyc
-functions/__pycache__/edge_detect.cpython-37.pyc
-functions/__pycache__/feather_fuse.cpython-37.pyc
-models/__pycache__/attention.cpython-37.pyc
-models/__pycache__/constructor_minimize.cpython-37.pyc
-models/__pycache__/constructor.cpython-37.pyc
-models/__pycache__/conv_block.cpython-37.pyc
-models/__pycache__/extractor_minimize_tradConv.cpython-37.pyc
-models/__pycache__/extractor_minimize.cpython-37.pyc
-models/__pycache__/extractor.cpython-37.pyc
 runs/*
+cache/*
+data/*
+*.pyc
