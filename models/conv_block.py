@@ -12,8 +12,8 @@ class ConvBlock(nn.Module):
         # self.conv = nn.Conv2d(in_channels, out_channels, k, s)
 
         self.conv = nn.Conv2d(in_channels, out_channels, (k, k), (s, s), (p, p), (d, d))
-        self.bn = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU()
+        # self.bn = nn.BatchNorm2d(out_channels)
+        # self.relu = nn.ReLU()
 
     def forward(self, x: Tensor) -> Tensor:
         # x = self.reflection_pad(x)
