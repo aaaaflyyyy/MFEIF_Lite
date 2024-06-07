@@ -1,4 +1,4 @@
 opencv-python == 4.5.5.64
 opencv-contrib-python == 4.5.5.64
-tqdm == 4.62.3
+tqdm == 4.66.3
 kornia == 0.6.4
